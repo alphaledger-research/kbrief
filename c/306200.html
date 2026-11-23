@@ -135,6 +135,7 @@ const st={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const iso=d=>d.slice(0,4)+'-'+d.slice(4,6)+'-'+d.slice(6,8);
 const pct=(v,s)=>v==null||isNaN(v)?'–':(s&&v>0?'+':'')+(v<0?'−':'')+Math.abs(v).toFixed(1)+'%';
+const track=n=>{try{if(window.goatcounter&&window.goatcounter.count)window.goatcounter.count({path:n,title:n,event:true})}catch(e){}};
 let IDX=null;const loadIdx=()=>IDX||(IDX=fetch(ROOT+'index.json').then(r=>r.json()).catch(()=>({f:[],co:[]})));
 /* 테마 */
 const root=document.documentElement,tb=$('#theme');
@@ -144,7 +145,7 @@ if(tb){upd();tb.onclick=()=>{root.dataset.theme=isDark()?'light':'dark';st.set('
 /* 관심종목 */
 let watch=new Set();try{watch=new Set(JSON.parse(st.get('alr-watch')||'[]'))}catch(e){}
 const setStar=c=>$$('.star[data-code="'+c+'"]').forEach(x=>x.setAttribute('aria-pressed',watch.has(c)));
-const toggleWatch=c=>{watch.has(c)?watch.delete(c):watch.add(c);st.set('alr-watch',JSON.stringify([...watch]));setStar(c);apply()};
+const toggleWatch=c=>{watch.has(c)?watch.delete(c):(watch.add(c),track('watch-add'));st.set('alr-watch',JSON.stringify([...watch]));setStar(c);apply()};
 $$('.star').forEach(b=>{b.setAttribute('aria-pressed',watch.has(b.dataset.code));
  b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();toggleWatch(b.dataset.code)})});
 /* 장부 필터·정렬 (주소에 상태 저장) */
@@ -181,7 +182,7 @@ $$('svg.spark').forEach(svg=>{let p=[];try{p=JSON.parse(svg.dataset.pts||'[]')}c
  svg.addEventListener('pointermove',mv);svg.addEventListener('pointerdown',mv);
  svg.addEventListener('pointerleave',()=>{cap.textContent=def;if(dot)dot.style.display='none'})});
 /* 공유: 휴대폰은 공유 창, 컴퓨터는 링크 복사 */
-$$('.share').forEach(b=>b.onclick=async e=>{e.preventDefault();const url=location.origin+location.pathname+'#'+b.dataset.anchor;
+$$('.share').forEach(b=>b.onclick=async e=>{e.preventDefault();track('share');const url=location.origin+location.pathname+'#'+b.dataset.anchor;
  try{if(navigator.share){await navigator.share({title:b.dataset.text,url});return}await navigator.clipboard.writeText(url);b.textContent='Link copied'}
  catch(err){b.textContent='Copy failed'}setTimeout(()=>b.textContent='Share',2000)});
 /* 주소의 #r… 로 들어오면 그 공시를 펼침 */
@@ -190,7 +191,7 @@ window.addEventListener('hashchange',openHash);
 /* 검색 창 (⌘K, Ctrl+K, /) */
 const pal=$('#pal'),pq=$('#pal-q'),pr=$('#pal-r');let sel=0,res=[];
 const PAGES=[['Latest brief','index.html'],['Screener','screener.html'],['After the filing','signals.html'],['Companies','companies.html'],['Archive','archive.html'],['Pro','pro.html'],['How it works','about.html']];
-function openPal(){if(!pal)return;pal.hidden=false;pq.value='';pq.focus();render('')}
+function openPal(){if(!pal)return;track('search-open');pal.hidden=false;pq.value='';pq.focus();render('')}
 function closePal(){if(pal&&!pal.hidden){pal.hidden=true;if(document.activeElement)document.activeElement.blur()}}
 async function render(v){
  v=v.trim().toLowerCase();const idx=await loadIdx();
@@ -240,8 +241,8 @@ if(scr){const S=new URLSearchParams(location.search);const F={t:S.get('t')||'all
  const csv=$('#scr-csv');if(csv)csv.onclick=()=>{const head=['date','company','korean_name','ticker','topic','filing_type','headline','amount_krw','market_cap_krw','size_vs_mcap_pct','share_of_revenue_pct','day_move_pct','r1','r5','r20','x1','x5','x20','filing_url'];
   const qq=v=>v==null?'':'"'+String(v).replace(/"/g,'""')+'"';
   const lines=[head.join(',')].concat(rows.map(f=>[iso(f.d),f.n,f.ko,f.c+f.s,f.tl,f.ty,f.h,f.a,f.m,f.imp,f.rev,f.mv,f.r1,f.r5,f.r20,f.x1,f.x5,f.x20,'https://dart.fss.or.kr/dsaf001/main.do?rcpNo='+f.id].map(qq).join(',')));
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+lines.join('\n')],{type:'text/csv'}));a.download='korea-filings-screen.csv';a.click()};
- const cl=$('#scr-link');if(cl)cl.onclick=async()=>{try{await navigator.clipboard.writeText(location.href);cl.textContent='Link copied'}catch(e){cl.textContent='Copy failed'}setTimeout(()=>cl.textContent='Copy link to this screen',2000)};
+  track('csv-download');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+lines.join('\n')],{type:'text/csv'}));a.download='korea-filings-screen.csv';a.click()};
+ const cl=$('#scr-link');if(cl)cl.onclick=async()=>{track('screen-link');try{await navigator.clipboard.writeText(location.href);cl.textContent='Link copied'}catch(e){cl.textContent='Copy failed'}setTimeout(()=>cl.textContent='Copy link to this screen',2000)};
  draw()}
 /* 공시 후 주가 반응 통계 */
 const sig=$('#sig');
